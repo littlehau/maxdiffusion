@@ -39,30 +39,41 @@ def run(config):
     pipeline, params = checkpoint_loader.load_checkpoint()
 
     if not params:
-      ## VAE
+      import orbax.checkpoint as ocp
+
+      step = checkpoint_loader.checkpoint_manager.latest_step()
+      max_logging.log(f"Restoring params from checkpoint step {step}")
+
+      ## VAE — saved with training=False (InferenceState)
       weights_init_fn = functools.partial(pipeline.vae.init_weights, rng=checkpoint_loader.rng)
       unboxed_abstract_state, _, _ = max_utils.get_abstract_state(
           pipeline.vae, None, config, checkpoint_loader.mesh, weights_init_fn, False
       )
-      # load unet params from orbax checkpoint
-      vae_params = load_params_from_path(
-          config, checkpoint_loader.checkpoint_manager, unboxed_abstract_state.params, "vae_state"
-      )
+      try:
+        item = {"vae_state": ocp.args.StandardRestore(unboxed_abstract_state)}
+        restored = checkpoint_loader.checkpoint_manager.restore(step, args=ocp.args.Composite(**item))
+        vae_state = {"params": restored["vae_state"].params}
+        max_logging.log("VAE params restored from checkpoint")
+      except Exception as e:
+        max_logging.log(f"VAE restore failed: {e}, using initialized params")
+        vae_state = {"params": unboxed_abstract_state.params}
 
-      vae_state = {"params": vae_params}
-
-      ## Flux
+      ## Flux — restore only params, skip opt_state by restoring without target
       weights_init_fn = functools.partial(
           pipeline.flux.init_weights, rngs=checkpoint_loader.rng, max_sequence_length=config.max_sequence_length
       )
       unboxed_abstract_state, _, _ = max_utils.get_abstract_state(
           pipeline.flux, None, config, checkpoint_loader.mesh, weights_init_fn, False
       )
-      # load unet params from orbax checkpoint
-      flux_params = load_params_from_path(
-          config, checkpoint_loader.checkpoint_manager, unboxed_abstract_state.params, "flux_state"
-      )
-      flux_state = {"params": flux_params}
+      try:
+        ckptr = ocp.StandardCheckpointer()
+        ckpt_path = f"{config.checkpoint_dir}/{step}/flux_state"
+        restored = ckptr.restore(ckpt_path)
+        flux_state = {"params": restored["params"]}
+        max_logging.log("Flux params restored from checkpoint")
+      except Exception as e:
+        max_logging.log(f"Flux restore failed: {e}, using initialized params")
+        flux_state = {"params": unboxed_abstract_state.params}
     else:
       weights_init_fn = functools.partial(
           pipeline.flux.init_weights,

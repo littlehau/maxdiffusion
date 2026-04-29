@@ -179,7 +179,7 @@ allow_split_physical_axes: False
 # Replace with dataset path or train_data_dir. One has to be set.
 dataset_name: 'diffusers/pokemon-gpt4-captions'
 train_split: 'train'
-dataset_type: 'tfrecord'  # Options: 'tfrecord', 'hf', 'tf', 'grain', 'synthetic'
+dataset_type: 'tf'  # Options: 'tfrecord', 'hf', 'tf', 'grain', 'synthetic'
 # ==============================================================================
 # Synthetic Data Configuration (only used when dataset_type='synthetic')
 # ==============================================================================

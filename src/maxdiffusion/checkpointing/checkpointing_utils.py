@@ -261,8 +261,10 @@ def load_state_if_possible(
       )
       item = {checkpoint_item: ocp.args.PyTreeRestore(item=abstract_unboxed_pre_state, restore_args=restore_args)}
       return checkpoint_manager.restore(latest_step, args=orbax.checkpoint.args.Composite(**item))
-    except:
-      max_logging.log(f"could not load {checkpoint_item} from orbax")
+    except Exception as e:
+      max_logging.log(f"could not load {checkpoint_item} from orbax: {e}")
+      import traceback
+      traceback.print_exc()
       return None
 
 
