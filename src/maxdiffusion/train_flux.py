@@ -16,6 +16,11 @@ limitations under the License.
 
 from typing import Sequence
 
+import os
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+import tensorflow as tf
+tf.config.set_visible_devices([], "GPU")
+
 import jax
 from absl import app
 from maxdiffusion import (max_logging, pyconfig, max_utils)
