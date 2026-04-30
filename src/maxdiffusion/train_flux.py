@@ -19,6 +19,8 @@ from typing import Sequence
 import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 import tensorflow as tf
+# TF is only used for data loading (CPU). Disable TF GPU to avoid
+# CUDA version conflicts on GPUs where TF lacks kernel support.
 tf.config.set_visible_devices([], "GPU")
 
 import jax
